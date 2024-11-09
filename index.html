@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FishermanAI</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        .experience-bar {
+            width: 100%;
+            height: 20px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .experience-fill {
+            height: 100%;
+            background: #3b82f6;
+            transition: width 0.3s ease;
+        }
+        .card {
+            perspective: 1000px;
+            cursor: pointer;
+        }
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <a href="index.html">
+                <h1 class="text-4xl font-bold text-blue-600 cursor-pointer">FishermanAI</h1>
+            </a>
+            <p class="text-gray-600">Catch the knowledge you need,reel in success with Fisherman AI</p>
+        </header>
+        
+        <!-- Subject Selection Screen -->
+        <div id="subject-screen" class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold mb-4">Select Your Subjects</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                <button onclick="toggleSubject('Mathematics')" class="subject-btn p-4 border rounded-lg hover:bg-blue-50">Mathematics</button>
+                <button onclick="toggleSubject('Physics')" class="subject-btn p-4 border rounded-lg hover:bg-blue-50">Physics</button>
+                <button onclick="toggleSubject('Chemistry')" class="subject-btn p-4 border rounded-lg hover:bg-blue-50">Chemistry</button>
+                <button onclick="toggleSubject('Biology')" class="subject-btn p-4 border rounded-lg hover:bg-blue-50">Biology</button>
+                <button onclick="toggleSubject('Computer Science')" class="subject-btn p-4 border rounded-lg hover:bg-blue-50">Computer Science</button>
+            </div>
+            <button onclick="showModeSelection()" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700">Continue</button>
+        </div>
+
+        <!-- Mode Selection Screen -->
+        <div id="mode-screen" class="bg-white rounded-lg shadow-lg p-6 hidden">
+            <h2 class="text-2xl font-bold mb-4">Choose Study Mode</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button onclick="startStudying('flashcards')" class="p-8 border rounded-lg hover:bg-blue-50">
+                    <h3 class="text-xl font-bold">Flashcards</h3>
+                    <p class="text-gray-600">Test yourself with interactive cards</p>
+                </button>
+                <button onclick="startStudying('multiple-choice')" class="p-8 border rounded-lg hover:bg-blue-50">
+                    <h3 class="text-xl font-bold">Multiple Choice</h3>
+                    <p class="text-gray-600">Practice with targeted questions</p>
+                </button>
+            </div>
+        </div>
+
+        <!-- Study Screen -->
+        <div id="study-screen" class="hidden">
+            <!-- Progress Section -->
+            <div class="mb-6 flex justify-between items-center">
+                <div class="w-1/2">
+                    <p class="text-sm text-gray-600 mb-1">Level <span id="level">1</span></p>
+                    <div class="experience-bar">
+                        <div id="exp-fill" class="experience-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm text-gray-600">Accuracy</p>
+                    <p class="font-bold"><span id="accuracy">0</span>%</p>
+                </div>
+            </div>
+
+            <!-- Flashcard Mode -->
+            <div id="flashcard-mode" class="hidden">
+                <div class="card h-64 bg-white rounded-lg shadow-lg">
+                    <div class="card-inner h-full">
+                        <div class="card-front p-6 flex items-center justify-center">
+                            <p id="flashcard-question" class="text-xl text-center"></p>
+                        </div>
+                        <div class="card-back p-6 flex items-center justify-center">
+                            <p id="flashcard-answer" class="text-xl text-center"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-center gap-4">
+                    <button onclick="handleFlashcardResponse(false)" class="px-6 py-3 bg-red-500 text-white rounded-lg">Previous</button>
+                    <button onclick="handleFlashcardResponse(true)" class="px-6 py-3 bg-green-500 text-white rounded-lg">Next</button>
+                </div>
+            </div>
+
+            <!-- Multiple Choice Mode -->
+            <div id="multiple-choice-mode" class="hidden">
+                <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                    <p id="mc-question" class="text-xl mb-6"></p>
+                    <div id="mc-options" class="grid grid-cols-1 gap-4">
+                        <!-- Options will be inserted here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedSubjects = [];
+        let currentMode = null;
+        let experience = 0;
+        let level = 1;
+        let difficulty = 1;
+        let correctAnswers = 0;
+        let totalAnswers = 0;
+        let currentQuestion = null;
+
+        // Mock questions database (in real app, these would be AI-generated)
+        const questionBank = {
+            Mathematics: [
+                {
+                    question: "What is the derivative of x²?",
+                    answer: "2x",
+                    options: ["2x", "x²", "x", "2"]
+                },
+                {
+                    question: "Solve for x: 2x + 5 = 13",
+                    answer: "4",
+                    options: ["4", "6", "8", "3"]
+                }
+            ],
+            Physics: [
+                {
+                    question: "What is Newton's First Law?",
+                    answer: "An object will remain at rest or in uniform motion unless acted upon by an external force",
+                    options: [
+                        "An object will remain at rest or in uniform motion unless acted upon by an external force",
+                        "Force equals mass times acceleration",
+                        "For every action there is an equal and opposite reaction",
+                        "Energy cannot be created or destroyed"
+                    ]
+                }
+                
+            ]
+        };
+        
+
+        function toggleSubject(subject) {
+            const index = selectedSubjects.indexOf(subject);
+            if (index === -1) {
+                selectedSubjects.push(subject);
+            } else {
+                selectedSubjects.splice(index, 1);
+            }
+            
+            const btn = event.target;
+            btn.classList.toggle('bg-blue-100');
+        }
+
+        function showModeSelection() {
+            if (selectedSubjects.length === 0) {
+                alert('Please select at least one subject');
+                return;
+            }
+            document.getElementById('subject-screen').classList.add('hidden');
+            document.getElementById('mode-screen').classList.remove('hidden');
+        }
+
+        function startStudying(mode) {
+            currentMode = mode;
+            document.getElementById('mode-screen').classList.add('hidden');
+            document.getElementById('study-screen').classList.remove('hidden');
+            
+            if (mode === 'flashcards') {
+                document.getElementById('flashcard-mode').classList.remove('hidden');
+            } else {
+                document.getElementById('multiple-choice-mode').classList.remove('hidden');
+            }
+            
+            generateQuestion();
+        }
+
+        function generateQuestion() {
+            const subject = selectedSubjects[Math.floor(Math.random() * selectedSubjects.length)];
+            const questions = questionBank[subject];
+            currentQuestion = questions[Math.floor(Math.random() * questions.length)];
+            
+            if (currentMode === 'flashcards') {
+                document.getElementById('flashcard-question').textContent = currentQuestion.question;
+                document.getElementById('flashcard-answer').textContent = currentQuestion.answer;
+                document.querySelector('.card').classList.remove('flipped');
+            } else {
+                document.getElementById('mc-question').textContent = currentQuestion.question;
+                const optionsContainer = document.getElementById('mc-options');
+                optionsContainer.innerHTML = '';
+                currentQuestion.options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.className = 'w-full p-4 border rounded-lg hover:bg-blue-50 text-left';
+                    button.textContent = option;
+                    button.onclick = () => handleMultipleChoiceResponse(option);
+                    optionsContainer.appendChild(button);
+                });
+            }
+        }
+
+        function handleFlashcardResponse(correct) {
+            updateProgress(correct);
+            generateQuestion();
+        }
+
+        function handleMultipleChoiceResponse(answer) {
+            const correct = answer === currentQuestion.answer;
+            updateProgress(correct);
+            generateQuestion();
+        }
+
+        function updateProgress(correct) {
+            totalAnswers++;
+            if (correct) {
+                correctAnswers++;
+                experience += 20;
+                difficulty = Math.min(difficulty + 0.1, 3);
+            } else {
+                difficulty = Math.max(difficulty - 0.1, 1);
+            }
+
+            if (experience >= 100) {
+                level++;
+                experience = 0;
+                document.getElementById('level').textContent = level;
+            }
+
+            document.getElementById('exp-fill').style.width = experience + '%';
+            document.getElementById('accuracy').textContent = Math.round((correctAnswers / totalAnswers) * 100);
+        }
+
+        // Initialize card flipping
+        document.querySelector('.card').addEventListener('click', function() {
+            this.classList.toggle('flipped');
+        });
+    </script>
+</body>
+</html>
